@@ -1,0 +1,18 @@
+  FORMAT OF THE SUBSETTED FILE
+    
+    ITEMS                      FORMAT   
+     
+ 1 YEAR                          I4        
+ 2 DOY                           I4        
+ 3 Hour                          I3        
+ 4 Scalar B, nT                  F6.1      
+ 5 Kp index                      I3        
+ 6 R (Sunspot No.)               I4        
+ 7 Dst-index, nT                 I6        
+ 8 ap_index, nT                  I4        
+ 9 f10.7_index                   F6.1      
+10 AE-index, nT                  I5        
+11 AL-index, nT                  I6        
+12 AU-index, nT                  I6        
+13 pc-index                      F6.1      
+14 Lyman_alpha                   F9.6      
