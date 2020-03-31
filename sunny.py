@@ -1,10 +1,10 @@
 ﻿# imports
 import numpy as np
 import matplotlib
-matplotlib.use("agg")
+#matplotlib.use('agg')
 import matplotlib.pyplot as plt
 import math
-
+import pandas as pd
 # set random generator
 generator = np.random.RandomState(42)
 
@@ -86,15 +86,14 @@ def mFFT(arr, draw=False, name='a[n]', x1 = 0, x2 = -1, y2 = -1, energy=False, n
         
     
     A = np.fft.rfft((arr - np.mean(arr)) / norm)
+    n = np.arange(len(arr))
+    n1 = len(arr) / n[1:]
     
     if draw:
         
         plt.rcParams['axes.grid'] = True
         fig, ax = plt.subplots(2, figsize=(6,4), dpi=150)
         plt.tight_layout()
-        
-        n = np.arange(len(arr))
-        n1 = len(arr) / n[1:]
         
         plt.subplots_adjust(hspace=0.5)
         
@@ -136,7 +135,7 @@ def mFFT(arr, draw=False, name='a[n]', x1 = 0, x2 = -1, y2 = -1, energy=False, n
         
         return en1, en2, en1/en2, np.abs(A)
     
-    return (np.abs(A), n1)
+    return (n1, np.abs(A))
 
 
 def draw_feature(name, xlim=100, ylim=0):
@@ -227,7 +226,7 @@ def imitate_Dst(delta=45, T=27, p=1, A_sin=1, to_smooth=False, D_1=1, B_2=0, D_2
     noiser_sin_small = lambda i : generator.normal(A_sin2 * np.sin(freq * i), D_2)
     start_value = -20
     arr = [start_value]
-
+    N = 19752
     for i in range(N):
         new_val = p * arr[-1]
         day = i % 365 + 1
@@ -276,7 +275,7 @@ def smooth_feature(data, name="Dst", delta=45, xlim=360):
     mean_val = np.mean(data[name])
     narr = []
     for i in range(N):
-        if in_spring_delta(data['Day'].iloc[i], delta) or in_autumn_delta(data['Day'].iloc[i], delta):
+        if in_spring_delta(data['DOY'].iloc[i], delta) or in_autumn_delta(data['DOY'].iloc[i], delta):
             narr.append(data[name].iloc[i])
         else:
             narr.append(mean_val)
@@ -284,19 +283,19 @@ def smooth_feature(data, name="Dst", delta=45, xlim=360):
     return mFFT(narr, draw=True, name=name, x2=xlim)
 
 def filt(data, day, rad):
-    data["filt"] = (((data["Day"] - day) % 365) <= rad) | ((data["Day"] - day) % 365 >= 365 - rad)
+    data["filt"] = (((data["DOY"] - day) % 365) <= rad) | ((data["DOY"] - day) % 365 >= 365 - rad)
     data["filted"] = data["Dst"] * data["filt"] + (1 - data["filt"]) * data["Dst"].mean()
 
 def filt_simple(data, day, rad):
     df = pd.DataFrame(data, columns=["Dst"])
-    df['Day'] = np.arange(0, len(data))
-    df["filt"] = (((df["Day"] - day) % 365) <= rad) | ((df["Day"] - day) % 365 >= 365 - rad)
+    df['DOY'] = np.arange(0, len(data))
+    df["filt"] = (((df["DOY"] - day) % 365) <= rad) | ((df["DOY"] - day) % 365 >= 365 - rad)
     df["filted"] = df["Dst"] * df["filt"] + (1 - df["filt"]) * df["Dst"].mean()
     return df["filted"]
     
 def get_year_max(datax, day, rad, year):
     datax["filt"] = (
-        (abs(365 + datax["Day"] - day) % 365 <= rad)
+        (abs(365 + datax["DOY"] - day) % 365 <= rad)
         & (abs(datax['Year'] - year - 1965) < 1))
     return max(datax["Dst"] * datax["filt"])
 
@@ -317,3 +316,82 @@ def retrieve_energy(ddata, draw=False):
         plt.title("energy change")
         plt.show()
     return (max(en1s[:37]), min(en1s[20:50]), max(en1s[37:]))
+
+
+def get_amplitude_of_p(mp, left, right):
+    """
+    Получить максимальную амплитуду для периодов с left по right при генерации с параметром p=mp
+    Все остальные параметры - по умолчанию
+    """
+    generated_data = imitate_Dst(p=mp, A_sin=1)
+    generated_data = list(map(lambda x : x, generated_data))
+    fft = list(mFFT(generated_data, draw=False, name=""))
+    fft_res = list(zip(fft[0], fft[1]))
+    filtered = filter(lambda x : left <= x[0] <= right, fft_res)
+    #print(list(map(lambda x : x[1], filtered)))
+    return np.max(list(map(lambda x : x[1], filtered)))
+
+def get_semiannual_amp(mp):
+    """ Получить полугодовую амплитуду """
+    return get_amplitude_of_p(mp, 175, 190)
+
+def get_27day_amp(mp):
+    """ Получить 27-дневную амплитуду """
+    return get_amplitude_of_p(mp, 24, 30)
+
+def get_relation_of_p(mp, to_smooth=False):
+    """ Получить отношение амплитуд """
+    generated_data = imitate_Dst(p=mp, to_smooth=to_smooth)
+    generated_data = list(map(lambda x : x, generated_data))
+    tmp = mFFT(arr=generated_data, draw=False, name="")
+    fft_res = list(zip(tmp[0], tmp[1]))
+    return(smoothed_relation(fft_res))
+
+def draw_semiannual_amplitude(p_from=0.5, p_to=1, n=100):
+    """ Построить график зависимости полугодовой амплитуды от p """
+    plt.figure(figsize=(13, 5))
+    plt.xlabel("value of p", fontsize=17)
+    plt.ylabel("amplitude of semi-annual period", fontsize=17)
+    ps = np.linspace(p_from, p_to, n)
+    res = list(map(lambda px : get_semiannual_amp(px), ps))
+    plt.title("Dependency of A_semiannual from p", fontsize=19)
+    plt.plot(ps, res)
+    
+def draw_27day_amplitude(p_from=0.5, p_to=1, n=100):
+    """ Построить график зависимости 27-дневной амплитуды от p + линейная аппроксимация"""
+    plt.figure(figsize=(13, 5))
+    plt.xlabel("value of p", fontsize=17)
+    plt.ylabel("amplitude of 27-day period", fontsize=17)
+    ps = np.linspace(p_from, p_to, n)
+    res = list(map(lambda px : get_27day_amp(px), ps))
+    approx_polynom = np.polyfit(ps, res, 1)
+    approx = np.polyval(approx_polynom, ps)
+    plt.title("Dependency of A_27day from p", fontsize=19)
+    plt.plot(ps, res)
+    plt.plot(ps, approx)
+    print("polynomial : ", approx_polynom)
+
+def draw_amplitude_relation(p_from=0.5, p_to=1, n=100, to_smooth=False):
+    plt.figure(figsize=(13, 5))
+    plt.xlabel("value of p", fontsize=17)
+    plt.ylabel("relation A_27/A_semi ", fontsize=17)
+    ps = np.linspace(p_from, p_to, n)
+    res = list(map(lambda x : get_relation_of_p(x, to_smooth), ps))
+    plt.title("Dependency of amplitude relationship from p", fontsize=19)
+    plt.plot(ps, res)
+
+def smooth_amps(t_from, t_to, amps):
+    diap = list(filter(lambda x: t_from <= x[0] <= t_to, amps))
+    ln = len(diap)
+    return sum(map(lambda x : x[1], diap))
+
+def smooth_27(amps):
+    return smooth_amps(27 - 4, 27 + 4, amps)
+
+def smooth_183(amps):
+    return max(map(lambda x : x[1], filter(lambda x : 183-4 <= x[0] <= 183 + 4, amps)))
+
+def smoothed_relation(amps):
+    return smooth_27(amps) / max(0.1, smooth_183(amps))
+
+#draw_amplitude_relation(n=20)
