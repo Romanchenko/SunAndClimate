@@ -59,7 +59,7 @@ def ar(p, base_value, noise_maker, to_add=10000):
         Массив(list) сгенерированных точек
     """
 
-    new_vals = np.array(arr)
+    new_vals = np.array(base_value)
     new_vals = np.append(new_vals, [0] * to_add)
     pos = 1
     for i in range(to_add):
@@ -68,7 +68,7 @@ def ar(p, base_value, noise_maker, to_add=10000):
     return new_vals
 
 
-def mFFT(arr, draw=False, name='a[n]', x1=0, x2=-1, y2=-1, energy=False, norm=-1, smth=0, silent=True):
+def mFFT(arr, draw=False, name='a[n]', x1=0, x2=-1, y2=-1, energy=False, norm=-1, smth=0, silent=True, of1 = False):
     """
     Parameters
     ----------
@@ -82,8 +82,8 @@ def mFFT(arr, draw=False, name='a[n]', x1=0, x2=-1, y2=-1, energy=False, norm=-1
         Правая граница по x на графике спектра
     y2 : double, optional
         Верхняя граница по y на графике спектра
-    smth : bool, optional
-        Наличие сглаживания
+    smth : int, optional
+        Радиус сглаживания по умолчанию 0
     norm : double
         Число для нормировки, стандартное - длина массива
     energy : bool
@@ -97,7 +97,7 @@ def mFFT(arr, draw=False, name='a[n]', x1=0, x2=-1, y2=-1, energy=False, norm=-1
         
     Returns
     -------
-    Если не выставлен флаг enerhy, то возвращается массив абсолютных значений амплитуд спектра.
+    Если не выставлен флаг energy, то возвращается массив абсолютных значений амплитуд спектра.
     Если флаг выставлен, то возращается кортеж из четырех элементов - энергия амплитуды 27-дневного сигнала,
     энергия амплитуды полугодового сигнала, их отношение и массив абсолютных значений амплитуд сигнала.
     """
@@ -113,50 +113,92 @@ def mFFT(arr, draw=False, name='a[n]', x1=0, x2=-1, y2=-1, energy=False, norm=-1
     if draw:
 
         plt.rcParams['axes.grid'] = True
-        fig, ax = plt.subplots(2, figsize=(6, 4), dpi=150)
-        plt.tight_layout()
+        if (not of1):
+            fig, ax = plt.subplots(2, figsize=(6, 4), dpi=150)
+            plt.tight_layout()
 
-        plt.subplots_adjust(hspace=0.5)
+            plt.subplots_adjust(hspace=0.5)
+            ax[0].plot(n, arr, '.-')
+            ax[0].set_title(name)
 
-        ax[0].plot(n, arr, '.-')
-        ax[0].set_title(name)
-
-        ax[1].set_title('$A$')
-        if y2 > 0:
-            ax[1].set_ylim(0, y2)
-        ax[1].set_xlim(x1, x2)
-        if smth > 0:
-            ax[1].plot(n1[0: (len(arr) // 2 - 2 * smth + 1)], smoth(np.abs(A), smth), '-')
+            ax[1].set_title('$A$')
+            if y2 > 0:
+                ax[1].set_ylim(0, y2)
+            ax[1].set_xlim(x1, x2)
+            
+            if smth > 0:
+                ax[1].plot(n1[0: (len(arr) // 2 - 2 * smth + 1)], smoth(np.abs(A), smth), '-')
+            else:
+                ax[1].plot(n1[0: (len(arr) // 2 + 1)], np.abs(A), '-')
+            ax[1].set_xlabel('Период (в днях)')
         else:
-            ax[1].plot(n1[0: (len(arr) // 2 + 1)], np.abs(A), '-')
-        ax[1].set_xlabel('Период (в днях)')
+            fig, ax = plt.subplots(1, figsize=(4, 2), dpi=150)
+            plt.tight_layout()
+
+            plt.subplots_adjust(hspace=0.5)
+
+            ax.set_title('$A$')
+            
+            if y2 > 0:
+                ax.set_ylim(0, y2)
+            ax.set_xlim(x1, x2)
+            
+            
+            if smth > 0:
+                ax.plot(n1[0: (len(arr) // 2 - 2 * smth + 1)], smoth(np.abs(A), smth), '-')
+            else:
+                ax.plot(n1[0: (len(arr) // 2 + 1)], np.abs(A), '-')
+            ax.set_xlabel('Период (в днях)')
 
         plt.show()
 
-    if energy:
-        n = np.arange(len(arr))
-        n1 = len(arr) / n[1:]
+    return np.abs(A)
 
-        ep = 29
-        radius = 3
 
-        msum = np.abs(A[(np.abs(n1[0: (len(arr) // 2 + 1)] - ep) <= radius)]).sum()
-        en1 = msum
-        if not silent:
-            print("Energy of", ep, "=", msum)
+def mFFTe(arr, norm=-1, smth=0, ep1 = 29, radius1 = 3, ep2 = 183, radius2 = 2, silent=True):
+    """
+    Parameters
+    ----------
+    smth : int, optional
+        Радиус сглаживания по умолчанию 0
+    norm : double
+        Число для нормировки, стандартное - длина массива
+    energy : bool
+        Искать ли энергию точки
+    ep1, ep2 : double
+        Точка для поиска энергии
+    radius1, radius2 : double
+        Радиус энергии
+    silent : bool
+        Нужен ли отладочный вывод
+        
+    Returns
+    -------
+    Если не выставлен флаг energy, то возвращается массив абсолютных значений амплитуд спектра.
+    Если флаг выставлен, то возращается кортеж из четырех элементов - энергия амплитуды 27-дневного сигнала,
+    энергия амплитуды полугодового сигнала, их отношение и массив абсолютных значений амплитуд сигнала.
+    """
+    if norm == -1:
+        norm = len(arr)
 
-        ep = 183
-        radius = 2
+    A = np.fft.rfft((arr - np.mean(arr)) / norm)
+    n = np.arange(len(arr))
+    n1 = len(arr) / n[1:]
+    
+    msum = np.abs(A[(np.abs(n1[0: (len(arr) // 2 + 1)] - ep1) <= radius1)]).sum()
+    en1 = msum
+    if not silent:
+        print("Energy of", ep1, "=", msum)
 
-        msum = np.abs(A[(np.abs(n1[0: (len(arr) // 2 + 1)] - ep) <= radius)]).sum()
-        en2 = msum
-        if not silent:
-            print("Energy of", ep, "=", msum)
-            print("Relation in", ep, "=", en1 / en2)
 
-        return en1, en2, en1 / en2, np.abs(A)
+    msum = np.abs(A[(np.abs(n1[0: (len(arr) // 2 + 1)] - ep2) <= radius2)]).sum()
+    en2 = msum
+    if not silent:
+        print("Energy of", ep2, "=", msum)
+        print("Relation in", ep1, "=", en1 / en2)
 
-    return n1, np.abs(A)
+    return np.abs(A), en1, en2, en1 / en2
+
 
 
 def draw_feature(name, xlim=100, ylim=0):
@@ -242,7 +284,7 @@ def create_generator_type_B(delta=45, T=27, p=1, A_sin_1=1, D_1=1, A_sin_2=1, D_
     return foo
 
 
-def imitate_Dst(delta=45, T=27, p=1, A_sin=1, to_smooth=False, D_1=1, B_2=0, D_2=1, only_sin=False, A_sin2=1):
+def imitate_Dst(Num = 19752, delta=45, T=27, p=1, A_sin=1, to_smooth=False, D_1=1, B_2=0, D_2=1, only_sin=False, A_sin2=1):
     """
     Продвинутый вариант @link(ar). Разные виды шума добавляются вне delta-окрестности весеннего и осеннего солнцестояний
     и внутри этих окрестностей. Возможно добавлять только синусуоидальный шум, но разный, или же вне окрестности добавлять белый шум
@@ -279,7 +321,7 @@ def imitate_Dst(delta=45, T=27, p=1, A_sin=1, to_smooth=False, D_1=1, B_2=0, D_2
     noiser_sin_small = lambda i: generator.normal(A_sin2 * np.sin(freq * i), D_2)
     start_value = -20
     arr = [start_value]
-    N = 19752
+    N = Num
     for i in range(N):
         new_val = p * arr[-1]
         day = i % 365 + 1
@@ -349,6 +391,10 @@ def filt_simple(data, day, rad):
     df["filted"] = df["Dst"] * df["filt"] + (1 - df["filt"]) * df["Dst"].mean()
     return df["filted"]
 
+def filtSim(data, day, rad):
+    data["filt"] = (((data["DOY"] - day) % 365) <= rad) | ((data["DOY"] - day) % 365 >= 365 - rad)
+    data["fsim"] = data["sim"] * data["filt"] + (1 - data["filt"]) * data["sim"].mean()
+
 
 def get_year_max(datax, day, rad, year):
     datax["filt"] = (
@@ -357,13 +403,13 @@ def get_year_max(datax, day, rad, year):
     return max(datax["Dst"] * datax["filt"])
 
 
-def retrieve_energy(ddata, draw=False):
+def retrieve_energy(ddata, draw=False, steps = 73):
     en1s = []
     en2s = []
     rels = []
-    for i in range(73):
-        filt(ddata, 1 + i * 5, 30)
-        en1, en2, rel, _ = mFFT(ddata["filted"], draw=False, x1=20, x2=40, norm=ddata["filt"].sum(), energy=True)
+    for i in range(steps):
+        filt(ddata, 1 + i * (365 // steps), 30)
+        _, en1, en2, rel= mFFTe(ddata["filted"], norm=ddata["filt"].sum())
         en1s.append(en1)
         en2s.append(en2)
         rels.append(rel)
@@ -462,5 +508,35 @@ def smooth_183(amps):
 def smoothed_relation(amps):
     return smooth_27(amps) / max(0.1, smooth_183(amps))
 
+def get_energys(data, doys, draw = False):
+    en1s = []
+    en2s = []
+    rels = []
+    for i in range(73):
+        day = 1 + i * 5
+        rad = 30
+        filt = (((doys - day) % 365) <= rad) | ((doys - day) % 365 >= 365 - rad)
+        filted = data * filt + (1 - filt) * data.mean()
+        _, en1, en2, rel= mFFTe(filted, norm = filt.sum())
+        en1s.append(en1)
+        en2s.append(en2)
+        rels.append(rel)
+    if (draw):
+        plt.plot( np.arange(1, 13.1, 1 / 6), en1s)
+        plt.xlabel("month")
+        plt.ylabel("27 days energy")
+        plt.title("energy change")
+        plt.show()
+    return en1s
+
+def draw_two(data1, doys1, data2, doys2):
+    en1s = get_energys(data1, doys1)
+    en2s = get_energys(data2, doys2)
+    plt.plot( np.arange(1, 13.1, 1 / 6), en1s)
+    plt.plot( np.arange(1, 13.1, 1 / 6), en2s)
+    plt.xlabel("month")
+    plt.ylabel("27 days energy")
+    plt.title("energy change")
+    plt.show()
 
 #draw_amplitude_relation(n=20)
