@@ -19,7 +19,7 @@ matplotlib.rcParams['lines.markersize'] = 0.5
 #  days of spring and autumn equinoxes
 spring = 79
 autumn = 266
-
+DAYS_PER_YEAR = 365
 
 class Generative:
     def __init__(self, my_generator, seed=42):
@@ -40,7 +40,7 @@ class Generative:
         self.step = 0
         self.cur_val = 0
 
-# autoregression generator
+
 def ar(p, base_value, noise_maker, to_add=10000):
     """
     Генератор последовательности по авторегрессионной модели
@@ -68,35 +68,33 @@ def ar(p, base_value, noise_maker, to_add=10000):
     return new_vals
 
 
-def mFFT(arr, draw=False, name='a[n]', x1=0, x2=-1, y2=-1, energy=False, norm=-1, smth=0, silent=True, of1 = False):
+def mFFT(arr, draw=False, name='a[n]', x1=0, x2=-1, y2=-1, norm=-1, draw_less=False):
     """
-    Parameters
-    ----------
-    draw : bool
-        Рисовать ли график
-    name : str, optional
-        Заголовок графика
-    x1 : double, optional
-        Левая граница по x на графике спектра
-    x2 : double, optional
-        Правая граница по x на графике спектра
-    y2 : double, optional
-        Верхняя граница по y на графике спектра
-    smth : int, optional
-        Радиус сглаживания по умолчанию 0
-    norm : double
-        Число для нормировки, стандартное - длина массива
-    energy : bool
-        Искать ли энергию точки
-    ep : double
-        Точка для поиска энергии
-    radius : double
-        Радиус энергии
-    silent : bool
-        Нужен ли отладочный вывод
-        
-    Returns
-    -------
+    Parameters:
+        draw : bool
+            Рисовать ли график
+        name : str, optional
+            Заголовок графика
+        x1 : double, optional
+            Левая граница по x на графике спектра
+        x2 : double, optional
+            Правая граница по x на графике спектра
+        y2 : double, optional
+            Верхняя граница по y на графике спектра
+        norm : double
+            Число для нормировки, стандартное - длина массива
+        energy : bool
+            Искать ли энергию точки
+        ep : double
+            Точка для поиска энергии
+        radius : double
+            Радиус энергии
+        silent : bool
+            Нужен ли отладочный вывод
+        draw_less : bool
+             Надо ли рисовать график последовательности вдобавок к спектру частот
+
+    Returns:
     Если не выставлен флаг energy, то возвращается массив абсолютных значений амплитуд спектра.
     Если флаг выставлен, то возращается кортеж из четырех элементов - энергия амплитуды 27-дневного сигнала,
     энергия амплитуды полугодового сигнала, их отношение и массив абсолютных значений амплитуд сигнала.
@@ -113,7 +111,7 @@ def mFFT(arr, draw=False, name='a[n]', x1=0, x2=-1, y2=-1, energy=False, norm=-1
     if draw:
 
         plt.rcParams['axes.grid'] = True
-        if (not of1):
+        if not draw_less:
             fig, ax = plt.subplots(2, figsize=(6, 4), dpi=150)
             plt.tight_layout()
 
@@ -125,29 +123,18 @@ def mFFT(arr, draw=False, name='a[n]', x1=0, x2=-1, y2=-1, energy=False, norm=-1
             if y2 > 0:
                 ax[1].set_ylim(0, y2)
             ax[1].set_xlim(x1, x2)
-            
-            if smth > 0:
-                ax[1].plot(n1[0: (len(arr) // 2 - 2 * smth + 1)], smoth(np.abs(A), smth), '-')
-            else:
-                ax[1].plot(n1[0: (len(arr) // 2 + 1)], np.abs(A), '-')
+            ax[1].plot(n1[0: (len(arr) // 2 + 1)], np.abs(A), '-')
             ax[1].set_xlabel('Период (в днях)')
         else:
             fig, ax = plt.subplots(1, figsize=(4, 2), dpi=150)
             plt.tight_layout()
-
             plt.subplots_adjust(hspace=0.5)
-
             ax.set_title('$A$')
             
             if y2 > 0:
                 ax.set_ylim(0, y2)
             ax.set_xlim(x1, x2)
-            
-            
-            if smth > 0:
-                ax.plot(n1[0: (len(arr) // 2 - 2 * smth + 1)], smoth(np.abs(A), smth), '-')
-            else:
-                ax.plot(n1[0: (len(arr) // 2 + 1)], np.abs(A), '-')
+            ax.plot(n1[0: (len(arr) // 2 + 1)], np.abs(A), '-')
             ax.set_xlabel('Период (в днях)')
 
         plt.show()
@@ -189,8 +176,6 @@ def mFFTe(arr, norm=-1, smth=0, ep1 = 29, radius1 = 3, ep2 = 183, radius2 = 2, s
     en1 = msum
     if not silent:
         print("Energy of", ep1, "=", msum)
-
-
     msum = np.abs(A[(np.abs(n1[0: (len(arr) // 2 + 1)] - ep2) <= radius2)]).sum()
     en2 = msum
     if not silent:
@@ -200,18 +185,13 @@ def mFFTe(arr, norm=-1, smth=0, ep1 = 29, radius1 = 3, ep2 = 183, radius2 = 2, s
     return np.abs(A), en1, en2, en1 / en2
 
 
-
-def draw_feature(name, xlim=100, ylim=0):
+def draw_feature(data, name, xlim=100, ylim=0):
     """
     Рисует график нужной фичи из таблицы omniweb и результаты разложения в Фурье
-    Parameters:
-    ----------
-        name : srting
-            Название показателя
-        xlim : double
-            Самый большой период для отображения в спектре
-        ylim : double
-            Самая большая амлитуда для отображения в спектре
+            :param ylim: Самая большая амлитуда для отображения в спектре
+            :param xlim: Самый большой период для отображения в спектре
+            :param name: Название показателя
+            :param data: Датафрейм, из которого берутся даные
     """
     if ylim == 0:
         mFFT(arr=data[name], draw=True, name=name, x1=0, x2=xlim)
@@ -265,9 +245,9 @@ def imitate_Dst_new(generation, num):
 def create_generator_type_A(delta=45, T=27, p=1, A_sin=1, D_1=1, B_2=0, D_2=1):
     def foo(day, prev, gen):
         val = p * prev
-        freq = 2 * Math.pi / T
-        if in_autumn_delta(day % 365, delta) or in_spring_delta(day % 365, delta):
-            val += gen.normal(A_sin * Math.sin(day * freq), D_1)
+        freq = 2 * np.pi / T
+        if in_autumn_delta(day % DAYS_PER_YEAR, delta) or in_spring_delta(day % DAYS_PER_YEAR, delta):
+            val += gen.normal(A_sin * np.sin(day * freq), D_1)
         else:
             val += gen.normal(B_2, D_2)
     return foo
@@ -276,11 +256,11 @@ def create_generator_type_A(delta=45, T=27, p=1, A_sin=1, D_1=1, B_2=0, D_2=1):
 def create_generator_type_B(delta=45, T=27, p=1, A_sin_1=1, D_1=1, A_sin_2=1, D_2=1):
     def foo(day, prev, gen):
         val = p * prev
-        freq = 2 * Math.pi / T
-        if in_autumn_delta(day % 365, delta) or in_spring_delta(day % 365, delta):
-            val += gen.normal(A_sin_1 * Math.sin(day * freq), D_1)
+        freq = 2 * np.pi / T
+        if in_autumn_delta(day % DAYS_PER_YEAR, delta) or in_spring_delta(day % DAYS_PER_YEAR, delta):
+            val += gen.normal(A_sin_1 * np.sin(day * freq), D_1)
         else:
-            val += gen.normal(A_sin_2 * Math.sin(day * freq), D_2)
+            val += gen.normal(A_sin_2 * np.sin(day * freq), D_2)
     return foo
 
 
@@ -290,7 +270,6 @@ def imitate_Dst(Num = 19752, delta=45, T=27, p=1, A_sin=1, to_smooth=False, D_1=
     и внутри этих окрестностей. Возможно добавлять только синусуоидальный шум, но разный, или же вне окрестности добавлять белый шум
     с параметрами D_2 и B_2, а только внутри синусоидальный.
     Parameters:
-    ----------
         delta : int
             Размер окрестности равноденствий
         T : int
@@ -312,19 +291,18 @@ def imitate_Dst(Num = 19752, delta=45, T=27, p=1, A_sin=1, to_smooth=False, D_1=
         A_sin2 : double
             Работает, если only_sin == True. Амплитуда синусоидального шума вне окрестности равноденствий
         Returns:
-        -------
             Возвращает массив сгенерированных точек
     """
     freq = 2 * np.pi / T
     noiser_basic = lambda: generator.normal(B_2, D_2)
-    noiser_sin = lambda i: generator.normal(A_sin * np.sin(freq * i), D_1)
-    noiser_sin_small = lambda i: generator.normal(A_sin2 * np.sin(freq * i), D_2)
+    noiser_sin = lambda t: generator.normal(A_sin * np.sin(freq * t), D_1)
+    noiser_sin_small = lambda t: generator.normal(A_sin2 * np.sin(freq * t), D_2)
     start_value = -20
     arr = [start_value]
     N = Num
     for i in range(N):
         new_val = p * arr[-1]
-        day = i % 365 + 1
+        day = i % DAYS_PER_YEAR + 1
         if in_spring_delta(day, delta) or in_autumn_delta(day, delta):
             new_val += noiser_sin(day)
         else:
@@ -338,7 +316,7 @@ def imitate_Dst(Num = 19752, delta=45, T=27, p=1, A_sin=1, to_smooth=False, D_1=
         mean_val = np.mean(arr)
         arr1 = []
         for i in range(len(arr)):
-            day = i % 365 + 1
+            day = i % DAYS_PER_YEAR + 1
             if in_spring_delta(day, delta) or in_autumn_delta(day, delta):
                 arr1.append(arr[i])
             else:
@@ -353,7 +331,6 @@ def smooth_feature(data, name="Dst", delta=45, xlim=360):
     Cглаживает массив data[name] так, чтобы в окрестности равноденствий все оставалось без
     изменений, а вне нее значения заменялось на среднее по всему массиву.
     Parameters:
-    ----------
         data : DataFrame
             Исходный DataFrame
         name : string
@@ -363,11 +340,9 @@ def smooth_feature(data, name="Dst", delta=45, xlim=360):
         xlim : int
             Лимит по периодичности в спектре(в днях)
         Returns:
-        -------
             массив амплитуд спектра + отрисовка графика
     """
     N = data[name].size
-    arr = np.array(data[name])
     mean_val = np.mean(data[name])
     new_array = []
     for i in range(N):
@@ -380,36 +355,30 @@ def smooth_feature(data, name="Dst", delta=45, xlim=360):
 
 
 def filt(data, day, rad):
-    data["filt"] = (((data["DOY"] - day) % 365) <= rad) | ((data["DOY"] - day) % 365 >= 365 - rad)
+    data["filt"] = (((data["DOY"] - day) % DAYS_PER_YEAR) <= rad) | ((data["DOY"] - day) % DAYS_PER_YEAR >= DAYS_PER_YEAR - rad)
     data["filted"] = data["Dst"] * data["filt"] + (1 - data["filt"]) * data["Dst"].mean()
 
 
 def filt_simple(data, day, rad):
     df = pd.DataFrame(data, columns=["Dst"])
     df['DOY'] = np.arange(0, len(data))
-    df["filt"] = (((df["DOY"] - day) % 365) <= rad) | ((df["DOY"] - day) % 365 >= 365 - rad)
+    df["filt"] = (((df["DOY"] - day) % DAYS_PER_YEAR) <= rad) | ((df["DOY"] - day) % DAYS_PER_YEAR >= DAYS_PER_YEAR - rad)
     df["filted"] = df["Dst"] * df["filt"] + (1 - df["filt"]) * df["Dst"].mean()
     return df["filted"]
 
-def filtSim(data, day, rad):
-    data["filt"] = (((data["DOY"] - day) % 365) <= rad) | ((data["DOY"] - day) % 365 >= 365 - rad)
+
+def filt_sim(data, day, rad):
+    data["filt"] = (((data["DOY"] - day) % DAYS_PER_YEAR) <= rad) | ((data["DOY"] - day) % DAYS_PER_YEAR >= DAYS_PER_YEAR - rad)
     data["fsim"] = data["sim"] * data["filt"] + (1 - data["filt"]) * data["sim"].mean()
 
 
-def get_year_max(datax, day, rad, year):
-    datax["filt"] = (
-            (abs(365 + datax["DOY"] - day) % 365 <= rad)
-            & (abs(datax['Year'] - year - 1965) < 1))
-    return max(datax["Dst"] * datax["filt"])
-
-
-def retrieve_energy(ddata, draw=False, steps = 73):
+def retrieve_energy(data, draw=False, steps=73):
     en1s = []
     en2s = []
     rels = []
     for i in range(steps):
-        filt(ddata, 1 + i * (365 // steps), 30)
-        _, en1, en2, rel= mFFTe(ddata["filted"], norm=ddata["filt"].sum())
+        filt(data, 1 + i * (DAYS_PER_YEAR // steps), 30)
+        _, en1, en2, rel = mFFTe(data["filted"], norm=data["filt"].sum())
         en1s.append(en1)
         en2s.append(en2)
         rels.append(rel)
@@ -432,7 +401,6 @@ def get_amplitude_of_p(mp, left, right):
     fft = list(mFFT(generated_data, draw=False, name=""))
     fft_res = list(zip(fft[0], fft[1]))
     filtered = filter(lambda x: left <= x[0] <= right, fft_res)
-    # print(list(map(lambda x : x[1], filtered)))
     return np.max(list(map(lambda x: x[1], filtered)))
 
 
@@ -452,7 +420,7 @@ def get_relation_of_p(mp, to_smooth=False):
     generated_data = np.array(list(map(lambda x: x, generated_data)))
     tmp = mFFT(arr=generated_data, draw=False, name="")
     fft_res = list(zip(tmp[0], tmp[1]))
-    return (smoothed_relation(fft_res))
+    return smoothed_relation(fft_res)
 
 
 def draw_semiannual_amplitude(p_from=0.5, p_to=1, n=100):
@@ -493,7 +461,6 @@ def draw_amplitude_relation(p_from=0.5, p_to=1, n=100, to_smooth=False):
 
 def smooth_amps(t_from, t_to, amps):
     diap = list(filter(lambda x: t_from <= x[0] <= t_to, amps))
-    ln = len(diap)
     return sum(map(lambda x: x[1], diap))
 
 
@@ -508,26 +475,28 @@ def smooth_183(amps):
 def smoothed_relation(amps):
     return smooth_27(amps) / max(0.1, smooth_183(amps))
 
-def get_energys(data, doys, draw = False):
+
+def get_energys(data, doys, draw=False):
     en1s = []
     en2s = []
     rels = []
     for i in range(73):
         day = 1 + i * 5
         rad = 30
-        filt = (((doys - day) % 365) <= rad) | ((doys - day) % 365 >= 365 - rad)
+        filt = (((doys - day) % DAYS_PER_YEAR) <= rad) | ((doys - day) % DAYS_PER_YEAR >= DAYS_PER_YEAR - rad)
         filted = data * filt + (1 - filt) * data.mean()
-        _, en1, en2, rel= mFFTe(filted, norm = filt.sum())
+        _, en1, en2, rel = mFFTe(filted, norm=filt.sum())
         en1s.append(en1)
         en2s.append(en2)
         rels.append(rel)
-    if (draw):
-        plt.plot( np.arange(1, 13.1, 1 / 6), en1s)
+    if draw:
+        plt.plot(np.arange(1, 13.1, 1 / 6), en1s)
         plt.xlabel("month")
         plt.ylabel("27 days energy")
         plt.title("energy change")
         plt.show()
     return en1s
+
 
 def draw_two(data1, doys1, data2, doys2):
     en1s = get_energys(data1, doys1)
@@ -538,5 +507,3 @@ def draw_two(data1, doys1, data2, doys2):
     plt.ylabel("27 days energy")
     plt.title("energy change")
     plt.show()
-
-#draw_amplitude_relation(n=20)
