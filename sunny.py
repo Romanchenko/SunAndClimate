@@ -384,7 +384,7 @@ def retrieve_energy(data, draw=False, steps=73):
         en2s.append(en2)
         rels.append(rel)
     if draw:
-        plt.plot(np.arange(1, 13.1, 1 / 6), en1s)
+        plt.plot(np.linspace(1, 13.1, steps), en1s)
         plt.xlabel('month')
         plt.ylabel('27 days energy')
         plt.title('energy change')
