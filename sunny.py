@@ -60,10 +60,9 @@ def ar(p, base_value, noise_maker, to_add=10000):
 
     new_values = np.array(base_value)
     new_values = np.append(new_values, [0] * to_add)
-    pos = 1
     for i in range(to_add):
         noise = noise_maker(i)
-        new_values[pos + i] = p * new_values[pos + i - 1] + noise
+        new_values[i + 1] = p * new_values[i] + noise
     return new_values
 
 
@@ -262,7 +261,7 @@ def create_generator_type_B(delta=45, T=27, p=1, A_sin_1=1, D_1=1, A_sin_2=1, D_
 def imitate_Dst(Num=19752, delta=45, T=27, p=1, A_sin=1, to_smooth=False, D_1=1, B_2=0, D_2=1, only_sin=False,
                 A_sin2=1):
     """
-    Продвинутый вариант . Разные виды шума добавляются вне delta-окрестности весеннего и осеннего солнцестояний
+    Продвинутый вариант функции ar(). Разные виды шума добавляются вне delta-окрестности весеннего и осеннего солнцестояний
     и внутри этих окрестностей. Возможно добавлять только синусуоидальный шум, но разный, или же вне окрестности добавлять белый шум
     с параметрами D_2 и B_2, а только внутри синусоидальный.
 
@@ -482,8 +481,10 @@ def get_energys(data, doys, draw=False):
     en1s = []
     en2s = []
     rels = []
-    for i in range(73):
-        day = 1 + i * 5
+    step = 5
+    iterations = DAYS_PER_YEAR // step
+    for i in range(iterations):
+        day = 1 + i * step
         rad = 30
         marked = (((doys - day) % DAYS_PER_YEAR) <= rad) | ((doys - day) % DAYS_PER_YEAR >= DAYS_PER_YEAR - rad)
         windowed = data * marked + (1 - marked) * data.mean()
@@ -492,7 +493,7 @@ def get_energys(data, doys, draw=False):
         en2s.append(en2)
         rels.append(rel)
     if draw:
-        plt.plot(np.arange(1, 13.1, 1 / 6), en1s)
+        plt.plot(np.linspace(1, 13.1, iterations), en1s)
         plt.xlabel('month')
         plt.ylabel('27 days energy')
         plt.title('energy change')
@@ -503,8 +504,9 @@ def get_energys(data, doys, draw=False):
 def draw_two(data1, doys1, data2, doys2):
     en1s = get_energys(data1, doys1)
     en2s = get_energys(data2, doys2)
-    plt.plot(np.arange(1, 13.1, 1 / 6), en1s)
-    plt.plot(np.arange(1, 13.1, 1 / 6), en2s)
+    step = 5
+    plt.plot(np.linspace(1, 13.1, DAYS_PER_YEAR // step), en1s)
+    plt.plot(np.linspace(1, 13.1, DAYS_PER_YEAR // step), en2s)
     plt.xlabel('month')
     plt.ylabel('27 days energy')
     plt.title('energy change')
