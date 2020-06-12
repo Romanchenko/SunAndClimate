@@ -66,7 +66,7 @@ def ar(p, base_value, noise_maker, to_add=10000):
     return new_values
 
 
-def mFFT(arr, draw=False, name='a[n]', x1=0, x2=-1, y2=-1, norm=-1, draw_less=False):
+def mFFT(arr, draw=False, name='a[n]', x1=0, x2=-1, y2=-1, norm=-1, draw_less=False, return_pair=False):
     """
     Parameters:
         arr : list
@@ -85,6 +85,8 @@ def mFFT(arr, draw=False, name='a[n]', x1=0, x2=-1, y2=-1, norm=-1, draw_less=Fa
             Число для нормировки, стандартное - длина массива
         draw_less : bool
              Надо ли рисовать график последовательности вдобавок к спектру частот
+        return_pair : bool
+            Возвращать ли массив периодов (координаты по x)
 
     Returns:
         Если не выставлен флаг energy, то возвращается массив абсолютных значений амплитуд спектра.
@@ -131,6 +133,8 @@ def mFFT(arr, draw=False, name='a[n]', x1=0, x2=-1, y2=-1, norm=-1, draw_less=Fa
 
         plt.show()
 
+    if return_pair:
+        return np.abs(A), n1[0: (len(arr) // 2 + 1)]
     return np.abs(A)
 
 
@@ -392,6 +396,21 @@ def retrieve_energy(data, draw=False, steps=73):
     return max(en1s[:37]), min(en1s[20:50]), max(en1s[37:])
 
 
+def retrieve_energy_arr(data, draw=False, steps=73):
+    en1s = []
+    for i in range(steps):
+        filt(data, 1 + i * (DAYS_PER_YEAR // steps), 30)
+        _, en1, en2, rel = mFFTe(data['windowed'], norm=data['marked'].sum())
+        en1s.append(en1)
+    if draw:
+        plt.plot(np.linspace(1, 13.1, steps), en1s)
+        plt.xlabel('month')
+        plt.ylabel('27 days energy')
+        plt.title('energy change')
+        plt.show()
+    return en1s
+
+
 def get_amplitude_of_p(mp, left, right):
     """
     Получить максимальную амплитуду для периодов с left по right при генерации с параметром p=mp
@@ -511,3 +530,40 @@ def draw_two(data1, doys1, data2, doys2):
     plt.ylabel('27 days energy')
     plt.title('energy change')
     plt.show()
+
+
+class collector:
+    def __init__(self, n):
+        self.arr = [[] for i in range(n)]
+        self.counter = 0
+        self.averaged = []
+        self.mins = []
+
+    def add(self, arrx):
+        i = 0
+        for t in arrx:
+            self.arr[i].append(t)
+            i += 1
+        self.counter += 1
+
+    def getAveraged(self):
+        if self.counter == 0:
+            return np.array(1)
+        self.averaged = []
+        for a in self.arr:
+            np_array = np.array(a)
+            self.averaged.append((np.average(np_array), np.std(np_array)))
+        return self.averaged
+
+    def getMin(self):
+        if self.counter == 0:
+            return np.array(1)
+        self.mins = []
+        for a in self.arr:
+            np_array = np.array(a)
+            if len(np_array) == 0:
+                self.mins.append((0, 0, 0))
+            else:
+                self.mins.append((np.min(np_array), np.average(np_array), np.max(np_array)))
+        return self.mins
+
