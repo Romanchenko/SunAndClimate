@@ -23,12 +23,13 @@ DAYS_PER_YEAR = 365
 
 
 class Generative:
-    def __init__(self, my_generator, seed=42):
+    def __init__(self, my_generator, seed=42, initial_value=-20):
         self.my_generator = my_generator
         self.step = 0
-        self.cur_val = -20
+        self.cur_val = initial_value
         self.randomness = np.random.RandomState(seed)
         self.seed = seed
+        self.initial_value = initial_value
 
     def next(self):
         self.step += 1
@@ -39,7 +40,7 @@ class Generative:
     def reset(self):
         self.randomness = np.random.RandomState(self.seed)
         self.step = 0
-        self.cur_val = 0
+        self.cur_val = self.initial_value
 
 
 def ar(p, base_value, noise_maker, to_add=10000):
@@ -142,7 +143,7 @@ def mFFTe(arr, norm=-1, ep1=29, radius1=3, ep2=183, radius2=2, silent=True):
     """
     Parameters:
         arr : list
-            Массив, для которого считается Фурье и энергия в тояках ep1 и ep2
+            Массив, для которого считается Фурье и энергия в точках ep1 и ep2
         norm : double
             Число для нормировки, стандартное - длина массива
         ep1: double
@@ -218,7 +219,7 @@ def in_delta(x, center, d):
     """
     Проверяет, находится ли точка x на расстоянии не более d от center
     """
-    return np.abs(x - center) < d
+    return np.abs(x - center) <= d
 
 
 def in_spring_delta(x, d):
