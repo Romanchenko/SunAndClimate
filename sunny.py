@@ -14,6 +14,9 @@ width = 17
 height = 5
 matplotlib.rcParams['figure.figsize'] = [width, height]
 matplotlib.rcParams['lines.markersize'] = 0.5
+matplotlib.rcParams['font.family'] = 'sans-serif'
+matplotlib.rcParams['font.sans-serif'] = ['Tahoma']
+
 # matplotlib.rcParams['scatter.edgecolors'] = "black"
 
 #  days of spring and autumn equinoxes
@@ -388,11 +391,14 @@ def retrieve_energy(data, draw=False, steps=73):
         en2s.append(en2)
         rels.append(rel)
     if draw:
-        plt.plot(np.linspace(1, 13.1, steps), en1s)
-        plt.xlabel('month')
-        plt.ylabel('27 days energy')
-        plt.title('energy change')
+        plt.figure(figsize=(12, 8))
+        plt.grid(True)
+        plt.plot(np.arange(1, 13.1, 1 / 6), en1s)
+        plt.xlabel("month", fontsize=14)
+        plt.ylabel("27 days energy", fontsize=14)
+        plt.title("Energy change", fontsize=16)
         plt.show()
+        
     return max(en1s[:37]), min(en1s[20:50]), max(en1s[37:])
 
 
